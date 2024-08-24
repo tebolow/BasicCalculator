@@ -1,5 +1,4 @@
 package com.example.calculator;
-import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -14,7 +13,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Stack;
 
 public class Calculator extends AppCompatActivity {
 
@@ -94,10 +96,8 @@ public class Calculator extends AppCompatActivity {
             }
         } else if (v.getId() == R.id.percent) {
             input.setText(currentInput.substring(0, currentInput.length() - 1));
-        } else if (v.getId() == R.id.division) {
-            input.setText(currentInput + (char) 247);
         } else if (v.getId() == R.id.equal) {
-            calculate(input.getText().toString());
+            convert(input.getText().toString());
         } else {
             String pressed = ((Button) v).getText().toString();
             if (currentInput.equals("0") && currentInput.length() == 1){
@@ -108,14 +108,64 @@ public class Calculator extends AppCompatActivity {
         }
     }
 
-    protected void calculate(String input) {
+    protected void convert(String input) {
         String[] parts = input.split("(?<=\\D)|(?=\\D)");
-        int numberOfOperands = Math.floorDiv(parts.length, 2);
-        for (int i = 0; i < parts.length; i++) {
-            if (parts[i].matches("\\d+")){
-                
+//        Log.d("Result", Arrays.toString(parts));
+        List<String> convertedParts = new ArrayList<>();
+        Stack<String> stack = new Stack<>();
+        for (String part : parts) {
+            if (part.matches("\\d+")) {
+                convertedParts.add(part);
+            } else {
+                while (!stack.isEmpty() && priority(part) <= priority(stack.peek())) {
+                    convertedParts.add(stack.pop());
+                }
+                stack.push(part);
             }
         }
-        Log.d("Result", Arrays.toString(parts));
+        while (!stack.isEmpty()) {
+            convertedParts.add(stack.pop());
+        }
+        calculate(convertedParts);
+//        Log.d("len", "Length: " + conversionStack.toString());
+//        while (!conversionStack.isEmpty()) {
+//            Log.d("Stack", "Stack: " + (conversionStack.pop()));
+//        }
+//        Log.d("converted", convertedParts.toString());
+    }
+
+    protected void calculate(List<String> postfix){
+        Stack<Double> stack = new Stack<>();
+        for (String part: postfix) {
+            if (part.matches("\\d+")) {
+                stack.push(Double.parseDouble(part));
+            } else {
+                double second = stack.pop();
+                double first = stack.pop();
+                switch (part){
+                    case "x":
+                        stack.push(first * second);
+                        break;
+                    case "/":
+                        stack.push(first / second);
+                        break;
+                    case "+":
+                        stack.push(first + second);
+                        break;
+                    case "-":
+                        stack.push(first - second);
+                        break;
+                }
+            }
+        }
+//        Log.d("Final Result", "Final Result = " + stack.pop());
+    }
+
+    protected short priority(String c){
+        if (c.equals("x") || c.equals("/")){
+            return 2;
+        } else {
+            return 1;
+        }
     }
 }
