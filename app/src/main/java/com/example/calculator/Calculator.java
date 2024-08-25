@@ -95,12 +95,17 @@ public class Calculator extends AppCompatActivity {
                 input.setText(currentInput.substring(0, currentInput.length() - 1));
             }
         } else if (v.getId() == R.id.percent) {
-            input.setText(currentInput.substring(0, currentInput.length() - 1));
+            convertToPercentage(currentInput);
         } else if (v.getId() == R.id.equal) {
-            convert(input.getText().toString());
+            if (check(input.getText().toString())) {
+                List<String> postfix = convert(input.getText().toString());
+                calculate(postfix);
+            } else {
+                input.setText("Enter vaild values, press AC");
+            }
         } else {
             String pressed = ((Button) v).getText().toString();
-            if (currentInput.equals("0") && currentInput.length() == 1){
+            if (currentInput.equals("0") && currentInput.length() == 1 && !pressed.equals(".")){
                 input.setText(pressed);
             } else {
                 input.setText(currentInput + pressed);
@@ -108,13 +113,15 @@ public class Calculator extends AppCompatActivity {
         }
     }
 
-    protected void convert(String input) {
-        String[] parts = input.split("(?<=\\D)|(?=\\D)");
-//        Log.d("Result", Arrays.toString(parts));
+    protected List<String> convert(String input) {
+        String[] parts = input.split("(?<=[+\\-*/])|(?=[+\\-*/])");
+        Log.d("Result", Arrays.toString(parts));
         List<String> convertedParts = new ArrayList<>();
         Stack<String> stack = new Stack<>();
+
         for (String part : parts) {
-            if (part.matches("\\d+")) {
+            // Match integers or decimal numbers
+            if (part.matches("\\d+(\\.\\d+)?")) {
                 convertedParts.add(part);
             } else {
                 while (!stack.isEmpty() && priority(part) <= priority(stack.peek())) {
@@ -123,21 +130,23 @@ public class Calculator extends AppCompatActivity {
                 stack.push(part);
             }
         }
+
         while (!stack.isEmpty()) {
             convertedParts.add(stack.pop());
         }
-        calculate(convertedParts);
-//        Log.d("len", "Length: " + conversionStack.toString());
-//        while (!conversionStack.isEmpty()) {
-//            Log.d("Stack", "Stack: " + (conversionStack.pop()));
-//        }
-//        Log.d("converted", convertedParts.toString());
+        Log.d("len", "Length: " + stack.toString());
+        while (!stack.isEmpty()) {
+            Log.d("Stack", "Stack: " + (stack.pop()));
+        }
+        Log.d("converted", convertedParts.toString());
+        return convertedParts;
     }
 
     protected void calculate(List<String> postfix){
         Stack<Double> stack = new Stack<>();
+        boolean divisionError = false;
         for (String part: postfix) {
-            if (part.matches("\\d+")) {
+            if (part.matches("\\d+(\\.\\d+)?")) {
                 stack.push(Double.parseDouble(part));
             } else {
                 double second = stack.pop();
@@ -147,7 +156,11 @@ public class Calculator extends AppCompatActivity {
                         stack.push(first * second);
                         break;
                     case "/":
-                        stack.push(first / second);
+                        if (second == 0){
+                            divisionError = true;
+                        } else {
+                            stack.push(first / second);
+                        }
                         break;
                     case "+":
                         stack.push(first + second);
@@ -157,8 +170,14 @@ public class Calculator extends AppCompatActivity {
                         break;
                 }
             }
+//            Log.d("Stack", "stack with each iteration = " + stack.lastElement());
         }
-//        Log.d("Final Result", "Final Result = " + stack.pop());
+//        Log.d("Final Result", "Final Result = " + stack.lastElement());
+        if (divisionError){
+            input.setText("Can't divide by zero, press AC");
+        } else {
+            input.setText(String.valueOf(stack.pop()));
+        }
     }
 
     protected short priority(String c){
@@ -166,6 +185,20 @@ public class Calculator extends AppCompatActivity {
             return 2;
         } else {
             return 1;
+        }
+    }
+
+    protected boolean check(String input){
+        return Character.isDigit(input.charAt(0)) && Character.isDigit(input.charAt(input.length() - 1));
+    }
+
+    protected void convertToPercentage(String txt) {
+        if (check(txt)) {
+            String[] parts = txt.split("(?<=[+\\-*/])|(?=[+\\-*/])");
+            parts[parts.length -1] = String.valueOf(Double.parseDouble(parts[parts.length -1]) / 100);
+            input.setText(String.join("", parts));
+        } else {
+            input.setText("You can't use % with operators, press AC");
         }
     }
 }
